@@ -1,0 +1,244 @@
+-- Delta Storm Leaderboard Hub Script
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+-- Clean up any existing GUIs
+if CoreGui:FindFirstChild("StormHubGui") then
+    CoreGui.StormHubGui:Destroy()
+end
+if CoreGui:FindFirstChild("StormLoadingGui") then
+    CoreGui.StormLoadingGui:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "StormHubGui"
+screenGui.IgnoreGuiInset = true
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+screenGui.Parent = CoreGui
+
+-- Function to run the loading screen sequence
+local function runLoadingScreen(onComplete)
+    local loadGui = Instance.new("ScreenGui")
+    loadGui.Name = "StormLoadingGui"
+    loadGui.IgnoreGuiInset = true
+    loadGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    loadGui.Parent = CoreGui
+
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    bg.BorderSizePixel = 0
+    bg.ZIndex = 2000
+    bg.Parent = loadGui
+
+    local centerContainer = Instance.new("Frame")
+    centerContainer.Size = UDim2.new(0, 300, 0, 150)
+    centerContainer.Position = UDim2.new(0.5, -150, 0.5, -75)
+    centerContainer.BackgroundTransparency = 1
+    centerContainer.ZIndex = 2001
+    centerContainer.Parent = bg
+
+    -- Spinner Ring
+    local spinner = Instance.new("Frame")
+    spinner.Size = UDim2.new(0, 60, 0, 60)
+    spinner.Position = UDim2.new(0.5, -30, 0, 0)
+    spinner.BackgroundTransparency = 1
+    spinner.ZIndex = 2002
+    spinner.Parent = centerContainer
+
+    local spinnerRing = Instance.new("UIStroke")
+    spinnerRing.Thickness = 6
+    spinnerRing.Color = Color3.fromRGB(255, 255, 255)
+    spinnerRing.Parent = spinner
+
+    local spinnerCorner = Instance.new("UICorner")
+    spinnerCorner.CornerRadius = UDim.new(1, 0)
+    spinnerCorner.Parent = spinner
+
+    local spinnerGrad = Instance.new("UIGradient")
+    spinnerGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(0.5, 0.8),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    spinnerGrad.Parent = spinner
+
+    local rotConn
+    rotConn = RunService.RenderStepped:Connect(function(dt)
+        if spinner and spinner.Parent then
+            spinner.Rotation = spinner.Rotation + (400 * dt)
+        else
+            if rotConn then rotConn:Disconnect() end
+        end
+    end)
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 50)
+    label.Position = UDim2.new(0, 0, 0, 75)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 22
+    label.Font = Enum.Font.GothamBold
+    label.Text = "Loading... 0%"
+    label.ZIndex = 2002
+    label.Parent = centerContainer
+
+    local checkmark = Instance.new("TextLabel")
+    checkmark.Size = UDim2.new(0, 60, 0, 60)
+    checkmark.Position = UDim2.new(0.5, -30, 0, 0)
+    checkmark.BackgroundTransparency = 1
+    checkmark.TextColor3 = Color3.fromRGB(46, 204, 113)
+    checkmark.TextSize = 48
+    checkmark.Font = Enum.Font.GothamBold
+    checkmark.Text = "✓"
+    checkmark.TextTransparency = 1
+    checkmark.Visible = false
+    checkmark.ZIndex = 2003
+    checkmark.Parent = centerContainer
+
+    -- Loading loop (4-second intervals, random 1-20% up to 100%)
+    task.spawn(function()
+        local progress = 0
+        repeat
+            task.wait(4)
+            progress = progress + math.random(1, 20)
+            if progress > 100 then
+                progress = 100
+            end
+            label.Text = "Loading... " .. progress .. "%"
+        until progress >= 100
+
+        if rotConn then rotConn:Disconnect() end
+        spinner.Visible = false
+
+        checkmark.Visible = true
+        TweenService:Create(checkmark, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+        label.Text = "Loaded Successfully!"
+
+        task.wait(1.5)
+
+        for i = 0, 1, 0.1 do
+            bg.BackgroundTransparency = i
+            label.TextTransparency = i
+            checkmark.TextTransparency = i
+            task.wait(0.02)
+        end
+        loadGui:Destroy()
+
+        if onComplete then
+            onComplete()
+        end
+    end)
+end
+
+-- Create the Medium-Sized Pure Black Rounded Menu Box
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 440, 0, 360)
+mainFrame.Position = UDim2.new(0.5, -220, 0.5, -180)
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false -- Hidden until initial loading finishes
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 16)
+mainCorner.Parent = mainFrame
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, 0, 0, 50)
+titleText.BackgroundTransparency = 1
+titleText.Text = "Storm Leaderboard Hub"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.TextSize = 18
+titleText.Font = Enum.Font.GothamBold
+titleText.Parent = mainFrame
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(1, -30, 0, 2)
+divider.Position = UDim2.new(0, 15, 0, 50)
+divider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+divider.BorderSizePixel = 0
+divider.Parent = mainFrame
+
+-- Scrolling List for Script Versions
+local listContainer = Instance.new("ScrollingFrame")
+listContainer.Size = UDim2.new(1, -30, 1, -70)
+listContainer.Position = UDim2.new(0, 15, 0, 60)
+listContainer.BackgroundTransparency = 1
+listContainer.BorderSizePixel = 0
+listContainer.CanvasSize = UDim2.new(0, 0, 0, 290)
+listContainer.ScrollBarThickness = 4
+listContainer.Parent = mainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 10)
+UIListLayout.Parent = listContainer
+
+-- Script Versions Data
+local scriptsData = {
+    { name = "Storm Leaderboard 1.0v", url = "https://raw.githubusercontent.com/smokestormhub12v/Storm-Leaderboard-1.0v/refs/heads/main/Storm%20Leaderboard%201.0v" },
+    { name = "Storm Leaderboard 0.9v", url = "https://raw.githubusercontent.com/smokestormhub12v/Storm-Leaderboard-0.9v/refs/heads/main/Storm%20Leaderboard%200.9v" },
+    { name = "Storm Leaderboard 0.5v", url = "https://raw.githubusercontent.com/smokestormhub12v/Storm-Leaderboard-0.5v/refs/heads/main/Storm%20Leaderboard%200.5v" },
+    { name = "Leaderboard 1.2v",         url = "https://raw.githubusercontent.com/smokestormhub12v/Storm-leaderboard/refs/heads/main/Leaderboard%201.2v" }
+}
+
+-- Generate rows for each script version with a green execute button
+for _, data in ipairs(scriptsData) do
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 55)
+    row.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    row.BorderSizePixel = 0
+    row.Parent = listContainer
+
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 8)
+    rowCorner.Parent = row
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0.65, 0, 1, 0)
+    nameLabel.Position = UDim2.new(0, 15, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = data.name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextSize = 14
+    nameLabel.Font = Enum.Font.GothamMedium
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = row
+
+    local execBtn = Instance.new("TextButton")
+    execBtn.Size = UDim2.new(0, 100, 0, 36)
+    execBtn.Position = UDim2.new(1, -112, 0.5, -18)
+    execBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Green execute button
+    execBtn.BorderSizePixel = 0
+    execBtn.Text = "Execute"
+    execBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    execBtn.TextSize = 14
+    execBtn.Font = Enum.Font.GothamBold
+    execBtn.Parent = row
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = execBtn
+
+    -- Execute Button Click Trigger
+    execBtn.MouseButton1Click:Connect(function()
+        mainFrame.Visible = false -- Hide menu box
+        
+        -- Trigger loading screen again, then run the loadstring when finished
+        runLoadingScreen(function()
+            local success, err = pcall(function()
+                loadstring(game:HttpGet(data.url))()
+            end)
+            if not success then
+                warn("Failed to execute script: " .. tostring(err))
+            end
+        end)
+    end)
+end
+
+-- Run startup loading screen first, then show the menu box
+runLoadingScreen(function()
+    mainFrame.Visible = true
+end)
